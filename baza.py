@@ -34,7 +34,7 @@ async def add_item(state):
     async with state.proxy() as data:
         # print(tuple(data.values()))
         send = tuple(data.values())
-        cursor.execute("INSERT INTO tovar (turi, name, ulchov, narx, tarifi, photo, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)", (send[0], send[1], send[2], send[3], send[4], send[5], send[6],))
+        cursor.execute("INSERT INTO tovar (turi, name, ulchov, narx, tarifi, photo, user_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (send[0], send[1], send[2], send[3], send[4], send[5], send[6], 0, ))
         # cursor.execute("INSERT INTO tovar (name, ulchov, narx, photo, tarifi) VALUES (?, ?, ?, ?, ?)", (data['name'], data['ulchov'], data['narx'], data['photo'], data['tarifi']))
         database.commit()
 
