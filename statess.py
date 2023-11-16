@@ -720,9 +720,13 @@ async def check_button_hh(call: types.CallbackQuery):
         button3 = InlineKeyboardButton(text='tttttt', callback_data='update')
         keyboard_inline = InlineKeyboardMarkup().add(button1, button2, button3)
         if sotuvchi[8]==xaridor[8] and not sotuvchi[9]==xaridor[9]:
+            if isinstance(x[3], int):
+                narx = '{0:,}'.format(int(x[3])).replace(',', ' ')
+            else:
+                narx = x[3]
             await call.message.answer_photo(x[5], caption=f"<b>ID</b> - {x[0]} \n<b>nomi</b>- {x[1]} "
                                                      f"\n<b>o'lchov birligi</b>- {x[2]} "
-                                                     f"\n<b>💵 narxi</b>- {x[3]} "
+                                                     f"\n<b>💵 narxi</b>- {narx} so'm"
                                                      f"\n<b>tarifi</b>- {x[4]} "
                                                      f"\n<b>Sotuvchi nomeri</b>- +{sotuvchi_nomeri}"
                                                      f"\n<b>Tovar sizning viloyatingizda joylashgan</b>"
