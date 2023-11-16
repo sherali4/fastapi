@@ -1,6 +1,6 @@
 from openpyxl import Workbook
 import sqlite3
-database = sqlite3.connect('bot.sqlite')
+database = sqlite3.connect('bot_lite.sqlite')
 cursor = database.cursor()
 
 def add_excel():
@@ -37,13 +37,13 @@ def add_excel():
         ws.cell(row=row, column=column, value=x)
 
 
-    cursor.execute("SELECT * FROM 'tovar'")
+    cursor.execute("SELECT * FROM tovar")
     tovar = cursor.fetchall()
 
 
     for y in tovar:
         ranges = range(0, len(y))
-        row = row +1
+        row = row + 1
         for w in ranges:
             ws.cell(row=row, column=w + 1, value=y[w])
 

@@ -38,6 +38,13 @@ async def add_item(state):
         # cursor.execute("INSERT INTO tovar (name, ulchov, narx, photo, tarifi) VALUES (?, ?, ?, ?, ?)", (data['name'], data['ulchov'], data['narx'], data['photo'], data['tarifi']))
         database.commit()
 
+async def update_narx(state):
+    async with state.proxy() as data:
+        # print(tuple(data.values()))
+        send = tuple(data.values())
+        cursor.execute('UPDATE tovar SET narx=? WHERE id=?',
+                       (send[1], send[0],))
+        database.commit()
 
 async def add_admin(state):
     async with state.proxy() as data:

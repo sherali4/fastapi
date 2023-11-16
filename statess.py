@@ -1,5 +1,10 @@
+import asyncio
 import datetime
 import sqlite3
+
+
+
+# pip3 freeze > requirements.txt  # Python3
 
 from aiogram import types, executor, Dispatcher, Bot
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -12,6 +17,8 @@ from baza import add_user, add_user_name, add_user_numb, db_connect, add_user_lo
     zakaz_otmen, zakaz_oladi, add_admin, add_tovar_turi_bazaga
 from config import TOKEN, gruppa, gruppa_sale, sherali, xa_yuq
 from excel import add_excel, add_zakaz_excel, add_users_excel
+from jey.baza import update_narx
+from jey.surov import narxini_uzgartirish
 from keyboard import markup_request_admin, markup_request_client, markup_request, markup_request_superadmin, \
     state_finish
 from surov import tovar_reg, del_tovar, plus_admin, del_admin, del_tovar_turi_admin, add_tovar_turi_admin, user_reg
@@ -252,6 +259,42 @@ async def del_item_by_id(message: types.Message, state: FSMContext):
     await state.finish()
     await message.answer(f"ID = { message.text} - raqamli tovar ro'yxatdan olib tashlandi!", reply_markup=markup_request_admin)
 
+
+@dp.message_handler(commands=['narxini_uzgartirish'], state=None)
+async def del_items(message: types.Message):
+    if is_superadmin(message.from_id, menyu='narxini_uzgartirish'):
+        await narxini_uzgartirish.id.set()
+        await message.reply('Tovarning id raqamini kiriting:', reply_markup=state_finish)
+    else:
+         await message.reply('Siz Admin emassiz')
+
+@dp.message_handler(state=narxini_uzgartirish.id)
+async def del_item_by_id(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['id'] = message.text
+    await bot.send_message(message.from_user.id, 'Tovarning narxini kiriting', reply_markup=state_finish)
+    await narxini_uzgartirish.next()
+
+
+
+@dp.message_handler(state=narxini_uzgartirish.narx)
+async def add_item_photoa(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+            data['narx'] = message.text
+    await update_narx(state)
+    # print(data)
+    # async with state.proxy() as data:
+    #     await message.reply(str(data))
+    await message.answer('Mahsulot narxi o\'zgartirildi', reply_markup=markup_request_admin)
+    # button2 = InlineKeyboardButton(text="Yangi tovarlarni ko'rish", callback_data="yangi-tovar")
+    # keyboard_inline = InlineKeyboardMarkup().add(button2)
+    await state.finish()
+    # await bot.send_message(xa_yuq, "Yangi mahsulot qo'shildi", reply_markup=keyboard_inline)
+
+
+
+
+
 @dp.message_handler(commands=['katalog'], state=None)
 async def add_items(message: types.Message):
     if is_superadmin(message.from_id, menyu='katalog'):
@@ -400,6 +443,7 @@ async def video_start(message: types.Message):
     await bot.send_video(message.from_user.id, video="BAACAgIAAxkBAAIBtmUq9e6TAy0ptHLX8nV3sdVvSIsVAAJ1NgACha2oS2yJ82ozxs5gMAQ")
 
 
+
 @dp.message_handler(commands=['start'])
 async def cmd_startt(message: types.Message):
 
@@ -426,6 +470,34 @@ async def cmd_startt(message: types.Message):
 
 
     await message.answer('?', reply_markup=keyboard_inline)
+
+
+#     keyboard_markup = types.InlineKeyboardMarkup(row_width=2)
+#     plus_button = types.InlineKeyboardButton('+', callback_data="increase")
+#     minus_button = types.InlineKeyboardButton('-', callback_data="decrease")
+#     keyboard_markup.add(plus_button, minus_button)
+#     await bot.send_message(message.chat.id, "Count: 0", reply_markup=keyboard_markup)
+#
+# counter = {}
+#
+
+# @dp.callback_query_handler(text='increase')
+# async def increase_handler(query: types.CallbackQuery):
+#     await bot.answer_callback_query(query.id)
+#     counter[query.from_user.id] = counter.get(query.from_user.id, 0) + 1
+#     await bot.edit_message_text(f"Count: {counter[query.from_user.id]}", query.from_user.id, query.message.message_id, reply_markup=query.message.reply_markup)
+#
+# @dp.callback_query_handler(text='decrease')
+# async def decrease_handler(query: types.CallbackQuery):
+#     await bot.answer_callback_query(query.id)
+#     counter[query.from_user.id] = counter.get(query.from_user.id, 0) - 1
+#     await bot.edit_message_text(f"Count: {counter[query.from_user.id]}", query.from_user.id, query.message.message_id, reply_markup=query.message.reply_markup)
+#
+#
+
+
+
+
 
 
 
@@ -539,36 +611,39 @@ async def check_button(call: types.CallbackQuery):
     await call.answer('Sotuv bo\'limiga yuborildi')
 
 
-@dp.callback_query_handler(text=["yangi-tovar", ])
-async def check_button():
-    cursor.execute("SELECT * FROM tovar WHERE status=0")
-    yangi_tovar = cursor.fetchall()
-    # for t in yangi_tovar:
-    #     await bot.send_message(xa_yuq, f'{t[0]} - raqamli Yangi tovarni kurildi')
-    #     await bot.send_photo(chat_id=xa_yuq, photo=t[5])
-
-    for tovar in yangi_tovar:
-        # await bot.send_message(xa_yuq, f'{tovar[0]} - raqamli 11111Yangi tovarni kurildi')
-        # # print(f"{tovar[0]}")
-        button = InlineKeyboardButton(text=f"{tovar[0]}", callback_data="tovar")
-        button1 = InlineKeyboardButton(text="O'chirish", callback_data="uchirish")
-        button2 = InlineKeyboardButton(text="Qo'shish", callback_data="qushish")
-        keyboard_inline = InlineKeyboardMarkup().add(button, button1, button2)
-        # # await bot.send_photo(chat_id=xa_yuq, photo=tovar[5], caption=f"<b>ID</b> - {tovar[0]} \n<b>nomi</b>- {tovar[1]} \n<b>o'lchov birligi</b>- {tovar[2]} \n<b>💵 narxi</b>- {tovar[3]} \n<b>tarifi</b>- {tovar[4]}", parse_mode='HTML', reply_markup=keyboard_inline)
-        await bot.send_photo(chat_id=xa_yuq, photo=tovar[5],
-                             caption=f"<b>ID</b> - {tovar[0]} \n<b>nomi</b>- {tovar[1]} \n<b>o'lchov birligi</b>- {tovar[2]} \n<b>💵 narxi</b>- {tovar[3]} \n<b>tarifi</b>- {tovar[4]}",
-                             parse_mode='HTML', reply_markup=keyboard_inline)
-# @dp.callback_query_handler(text=["yangi-tovar",])
-# async def check_button(call: types.CallbackQuery):
-#     cursor.execute("SELECT * FROM 'tovar' WHERE status =?", (0,))
-#     yangi_tovar = cursor.fetchall()++
+# @dp.callback_query_handler(text=["yangi-tovar", ])
+# async def check_button1():
+#     cursor.execute("SELECT * FROM tovar WHERE status=0")
+#     yangi_tovar = cursor.fetchall()
+#     # for t in yangi_tovar:
+#     #     await bot.send_message(xa_yuq, f'{t[0]} - raqamli Yangi tovarni kurildi')
+#     #     await bot.send_photo(chat_id=xa_yuq, photo=t[5])
+#
 #     for tovar in yangi_tovar:
-#         # print(f"{tovar[0]}")
+#         # await bot.send_message(xa_yuq, f'{tovar[0]} - raqamli 11111Yangi tovarni kurildi')
+#         # # print(f"{tovar[0]}")
 #         button = InlineKeyboardButton(text=f"{tovar[0]}", callback_data="tovar")
 #         button1 = InlineKeyboardButton(text="O'chirish", callback_data="uchirish")
 #         button2 = InlineKeyboardButton(text="Qo'shish", callback_data="qushish")
 #         keyboard_inline = InlineKeyboardMarkup().add(button, button1, button2)
-#         await bot.send_photo(chat_id=xa_yuq, photo=tovar[5], caption=f"<b>ID</b> - {tovar[0]} \n<b>nomi</b>- {tovar[1]} \n<b>o'lchov birligi</b>- {tovar[2]} \n<b>💵 narxi</b>- {tovar[3]} \n<b>tarifi</b>- {tovar[4]}", parse_mode='HTML', reply_markup=keyboard_inline)
+#         # # await bot.send_photo(chat_id=xa_yuq, photo=tovar[5], caption=f"<b>ID</b> - {tovar[0]} \n<b>nomi</b>- {tovar[1]} \n<b>o'lchov birligi</b>- {tovar[2]} \n<b>💵 narxi</b>- {tovar[3]} \n<b>tarifi</b>- {tovar[4]}", parse_mode='HTML', reply_markup=keyboard_inline)
+#         await bot.send_photo(chat_id=xa_yuq, photo=tovar[5],
+#                              caption=f"<b>ID</b> - {tovar[0]} \n<b>nomi</b>- {tovar[1]} \n<b>o'lchov birligi</b>- {tovar[2]} \n<b>💵 narxi</b>- {tovar[3]} \n<b>tarifi</b>- {tovar[4]}",
+#                              parse_mode='HTML', reply_markup=keyboard_inline)
+
+
+
+@dp.callback_query_handler(text=["yangi-tovar",])
+async def check_button(call: types.CallbackQuery):
+    cursor.execute("SELECT * FROM 'tovar' WHERE status =?", (0,))
+    yangi_tovar = cursor.fetchall()
+    for tovar in yangi_tovar:
+        # print(f"{tovar[0]}")
+        button = InlineKeyboardButton(text=f"{tovar[0]}", callback_data="tovar")
+        button1 = InlineKeyboardButton(text="O'chirish", callback_data="uchirish")
+        button2 = InlineKeyboardButton(text="Qo'shish", callback_data="qushish")
+        keyboard_inline = InlineKeyboardMarkup().add(button, button1, button2)
+        await bot.send_photo(chat_id=xa_yuq, photo=tovar[5], caption=f"<b>ID</b> - {tovar[0]} \n<b>nomi</b>- {tovar[1]} \n<b>o'lchov birligi</b>- {tovar[2]} \n<b>💵 narxi</b>- {tovar[3]} \n<b>tarifi</b>- {tovar[4]}", parse_mode='HTML', reply_markup=keyboard_inline)
 
 
 @dp.callback_query_handler(text=["uchirish",])
@@ -642,7 +717,8 @@ async def check_button_hh(call: types.CallbackQuery):
         sotuvchi_nomeri = sotuvchi[2]
         button1 = InlineKeyboardButton(text=f"{x[0]}", callback_data="In_First_button")
         button2 = InlineKeyboardButton(text="Sotib olish", callback_data="In_Second_button")
-        keyboard_inline = InlineKeyboardMarkup().add(button1, button2)
+        button3 = InlineKeyboardButton(text='tttttt', callback_data='update')
+        keyboard_inline = InlineKeyboardMarkup().add(button1, button2, button3)
         if sotuvchi[8]==xaridor[8] and not sotuvchi[9]==xaridor[9]:
             await call.message.answer_photo(x[5], caption=f"<b>ID</b> - {x[0]} \n<b>nomi</b>- {x[1]} "
                                                      f"\n<b>o'lchov birligi</b>- {x[2]} "
@@ -665,9 +741,14 @@ async def check_button_hh(call: types.CallbackQuery):
             except:
                 pass
         elif sotuvchi[8]==xaridor[8] and sotuvchi[9]==xaridor[9]:
+            if isinstance(x[3], int):
+                narx = '{0:,}'.format(int(x[3])).replace(',', ' ')
+            else:
+                narx = x[3]
             await call.message.answer_photo(x[5], caption=f"<b>ID</b> - {x[0]} \n<b>nomi</b>- {x[1]} "
                                                      f"\n<b>o'lchov birligi</b>- {x[2]} "
-                                                     f"\n<b>💵 narxi</b>- {x[3]} "
+                                                     # f"\n<b>💵 narxi</b>- {x[3]} "
+                                                     f"\n<b>💵 narxi</b>- {narx} so'm"
                                                      f"\n<b>tarifi</b>- {x[4]} "
                                                      f"\n<b>Sotuvchi nomeri</b>- +{sotuvchi_nomeri}"
                                                      f"\n<b>Tovar sizning shahringiz(tumaningiz)da joylashgan</b>"
